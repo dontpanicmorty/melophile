@@ -1,0 +1,36 @@
+name: Build
+
+# Tests and builds Melophile on an Apple silicon Mac and an Intel Mac, and self-tests each build on its own
+# kind of machine (the Intel build can't be checked natively on the author's Mac). Each disk image is kept.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Tests
+        run: |
+          uv sync
+          QT_QPA_PLATFORM=offscreen uv run pytest -q
+      - name: Build Melophile.app (${{ matrix.arch }})
+        run: ./scripts/build_macos.sh
+      - name: Fingerprint test with the app's own fpcalc
+        run: MELOPHILE_BIN="$PWD/dist/${{ matrix.arch }}/Melophile.app/Contents/Resources/bin" uv run pytest -q tests/test_real_fingerprints.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: melophile-macos-${{ matrix.arch }}
+          path: dist/Melophile-*.dmg
