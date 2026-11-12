@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+GIT_HOOK_NAME=pre-commit exec "$(git rev-parse --show-toplevel)/.githooks/block-main.sh" "$@"
